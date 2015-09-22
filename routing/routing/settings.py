@@ -110,7 +110,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'routing',
-        'USER': 'postgres',
+        'USER': 'vagrant',
         'PASSWORD': 'sidewalk',
         'HOST': 'localhost',
         'PORT': '',
