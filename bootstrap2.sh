@@ -186,3 +186,8 @@ sudo su -l postgres -c "psql routing -c '
 
 #   SELECT pgr_createTopology('sidewalk_edge', 0.00001, 'wkb_geometry', 'sidewalk_edge_id');
 # \"";
+
+# Final setup of the Django app
+cd /vagrant/routing
+python manage.py makemigrations
+python manage.py migrate
