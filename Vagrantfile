@@ -85,4 +85,7 @@ Vagrant.configure(2) do |config|
 
   # PostgreSQL Server port forwarding
   config.vm.network "forwarded_port", guest: 5432, host: 15432
+
+  # Django Server port forwarding
+  config.vm.network "forwarded_port", guest: 8000, host: 8000
 end

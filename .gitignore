@@ -1,2 +1,8 @@
-# Vagrant
+# Python Stuff
+*.pyc
+
+# Django App Stuff
+routing/mysite.log
+
+# Vagrant Stuff
 .vagrant

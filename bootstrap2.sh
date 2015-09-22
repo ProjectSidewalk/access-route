@@ -1,3 +1,8 @@
+# Setup pip
+sudo apt-get install
+sudo apt-get install -y postgresql-server-dev-9.3 python-dev python-pip
+sudo pip install -r /vagrant/requirements.txt
+
 # Add pgRouting launchpad repository
 sudo add-apt-repository ppa:georepublic/pgrouting
 sudo apt-get update
@@ -27,15 +32,6 @@ sudo su -l postgres -c "psql routing -c 'CREATE EXTENSION pgrouting'"
 
 ogr2ogr -f "PostgreSQL" PG:"host=localhost dbname=routing user=vagrant password=sidewalk" "/vagrant/simple.geojson" -nln sidewalk_edge -append
 sudo su -l postgres -c "psql routing -c 'ALTER TABLE sidewalk_edge RENAME COLUMN ogc_fid TO sidewalk_edge_id'"
-
-# TODO: Ways does not exist
-# Add topology
-# sudo su -l postgres -c "psql routing -c \"
-#   ALTER TABLE ways ADD COLUMN \"source\" integer;
-#   ALTER TABLE ways ADD COLUMN \"target\" integer;
-
-#   SELECT pgr_createTopology('sidewalk_edge', 0.00001, 'wkb_geometry', 'sidewalk_edge_id');
-# \"";
 
 # Create required tables
 sudo su -l postgres -c "psql routing -c 'CREATE SEQUENCE feature_types_type_id_seq'"
@@ -181,3 +177,12 @@ sudo su -l postgres -c "psql routing -c '
   ALTER FUNCTION public.calculate_accessible_cost(integer)
     OWNER TO postgres;
 '";
+
+# TODO: Ways does not exist
+# Add topology
+# sudo su -l postgres -c "psql routing -c \"
+#   ALTER TABLE ways ADD COLUMN \"source\" integer;
+#   ALTER TABLE ways ADD COLUMN \"target\" integer;
+
+#   SELECT pgr_createTopology('sidewalk_edge', 0.00001, 'wkb_geometry', 'sidewalk_edge_id');
+# \"";
