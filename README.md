@@ -14,7 +14,49 @@ Features:
  * Accessibility obstacles marked on map with clickable pins; links to Google Street View imagery
  * Customizable cost calculation algorithm for routing
 
-### Installation/Usage
+### Installation/Usage (Easy Way) - Using Vagrant
+Start by installing virtualbox (www.virtualbox.org/wiki/Downloads) and vagrant (www.vagrantup.com). Spend some time setting up and familiarizing yourself with vagrant. Afterwards, in the access-route directory run:
+
+```
+vagrant up
+```
+
+This will create a new Ubuntu Trusty 64 Bit virtual machine and configure it for this project. This step will take a while. When it completes, you can log into a terminal of your new virtual machine by using:
+
+```
+vagrant ssh
+```
+
+You can find the access-route project in the /vagrant directory. To start the app run:
+
+```
+cd /vagrant/routing
+python manage.py runserver 0.0.0.0:8000
+```
+
+Then go to http://localhost:8000 on your laptop to see the website!
+
+You can also access the PostgreSQL database running inside of vagrant. For example, on osx you can use an app like Postico to connect to the PostgreSQL database using the credentials:
+
+```
+Host: localhost:15432
+User: vagrant
+Password: sidewalk
+Database: routing
+```
+
+When you are done working be sure the suspend (or halt/destroy) your vagrant virtual machine:
+```
+vagrant suspend
+```
+
+When you are ready to start working again just use:
+```
+vagrant up
+vagrant ssh
+```
+
+### Installation/Usage (Hard Way) - On your native machine
 
 #### Notes
 This guide assumes that you have street network data in geojson format, and information about the locations of accessibility features/obstacles in geojson files with a different file for each type of feature. If you have the data a different format, you may have to do some conversions or make adjustments to the instructions below.
