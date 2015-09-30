@@ -76,9 +76,9 @@ Vagrant.configure(2) do |config|
 
   # TODO: Do we need this version installed?
   # Install PostGIS
-  config.vm.provision "shell", inline: <<-SHELL
-    sudo apt-get install -y postgis postgresql-9.3-postgis-2.1
-  SHELL
+  #config.vm.provision "shell", inline: <<-SHELL
+  #  sudo apt-get install -y postgis postgresql-9.3-postgis-2.1
+  #SHELL
 
   # Bootstrap Postgres
   config.vm.provision "shell", path: "Bootstrap/bootstrap2.sh"
