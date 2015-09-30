@@ -5,7 +5,7 @@ APP_DB_USER=vagrant
 APP_DB_PASS=sidewalk
 
 # Edit the following to change the name of the database that is created (defaults to the user name)
-APP_DB_NAME=routing
+APP_DB_NAME=sidewalk
 
 # Edit the following to change the version of PostgreSQL that is installed
 PG_VERSION=9.4

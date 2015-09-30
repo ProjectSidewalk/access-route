@@ -18,24 +18,24 @@ sudo apt-get install -y gdal-bin
 # sudo npm install -g topojson
 
 # Following instructions from: https://github.com/tongning/access-route/blob/d49dc6efb6f49af7ed27baf633e9b0815778a4fc/README.md
-sudo su -l postgres -c "createdb routing"
+sudo su -l postgres -c "createdb sidewalk"
 
 # Let us be superuser
-sudo su -l postgres -c "psql routing -c 'ALTER USER vagrant WITH SUPERUSER'"
+sudo su -l postgres -c "psql sidewalk -c 'ALTER USER vagrant WITH SUPERUSER'"
 
 # Install extentions
-sudo su -l postgres -c "psql routing -c 'CREATE EXTENSION postgis'"
-sudo su -l postgres -c "psql routing -c 'CREATE EXTENSION postgis_topology'"
-sudo su -l postgres -c "psql routing -c 'CREATE EXTENSION fuzzystrmatch'"
-sudo su -l postgres -c "psql routing -c 'CREATE EXTENSION postgis_tiger_geocoder'"
-sudo su -l postgres -c "psql routing -c 'CREATE EXTENSION pgrouting'"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION postgis'"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION postgis_topology'"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION fuzzystrmatch'"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION postgis_tiger_geocoder'"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION pgrouting'"
 
-ogr2ogr -f "PostgreSQL" PG:"host=localhost dbname=routing user=vagrant password=sidewalk" "/vagrant/simple.geojson" -nln sidewalk_edge -append
-sudo su -l postgres -c "psql routing -c 'ALTER TABLE sidewalk_edge RENAME COLUMN ogc_fid TO sidewalk_edge_id'"
+ogr2ogr -f "PostgreSQL" PG:"host=localhost dbname=sidewalk user=vagrant password=sidewalk" "/vagrant/simple.geojson" -nln sidewalk_edge -append
+sudo su -l postgres -c "psql sidewalk -c 'ALTER TABLE sidewalk_edge RENAME COLUMN ogc_fid TO sidewalk_edge_id'"
 
 # Create required tables
-sudo su -l postgres -c "psql routing -c 'CREATE SEQUENCE feature_types_type_id_seq'"
-sudo su -l postgres -c "psql routing -c \"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE SEQUENCE feature_types_type_id_seq'"
+sudo su -l postgres -c "psql sidewalk -c \"
   CREATE TABLE public.feature_types
   (
     type_id integer NOT NULL DEFAULT nextval('feature_types_type_id_seq'::regclass),
@@ -47,14 +47,14 @@ sudo su -l postgres -c "psql routing -c \"
   );
   ALTER TABLE public.feature_types OWNER TO vagrant;
 \""
-sudo su -l postgres -c "psql routing -c \"
+sudo su -l postgres -c "psql sidewalk -c \"
   INSERT INTO feature_types (type_string) VALUES
     ('type_string'),
     ('construction');
 \""
 
-sudo su -l postgres -c "psql routing -c 'CREATE SEQUENCE accessibility_features_feature_id_seq'"
-sudo su -l postgres -c "psql routing -c \"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE SEQUENCE accessibility_features_feature_id_seq'"
+sudo su -l postgres -c "psql sidewalk -c \"
   CREATE TABLE public.accessibility_feature
   (
     accessibility_feature_id integer NOT NULL DEFAULT nextval('accessibility_features_feature_id_seq'::regclass),
@@ -74,8 +74,8 @@ sudo su -l postgres -c "psql routing -c \"
 \""
 
 # TODO: sidewalk_edge_accessibility_feature
-sudo su -l postgres -c "psql routing -c 'CREATE SEQUENCE sidewalk_edge_accessibility_f_sidewalk_edge_accessibility_f_seq'"
-sudo su -l postgres -c "psql routing -c \"
+sudo su -l postgres -c "psql sidewalk -c 'CREATE SEQUENCE sidewalk_edge_accessibility_f_sidewalk_edge_accessibility_f_seq'"
+sudo su -l postgres -c "psql sidewalk -c \"
   CREATE TABLE public.sidewalk_edge_accessibility_feature
   (
     sidewalk_edge_accessibility_feature_id integer NOT NULL DEFAULT nextval('sidewalk_edge_accessibility_f_sidewalk_edge_accessibility_f_seq'::regclass),
@@ -93,7 +93,7 @@ sudo su -l postgres -c "psql routing -c \"
     OWNER TO postgres;
 \""
 
-sudo su -l postgres -c "psql routing -c \"
+sudo su -l postgres -c "psql sidewalk -c \"
   CREATE TABLE public.elevation
   (
     lat double precision NOT NULL,
@@ -124,7 +124,7 @@ sudo su -l postgres -c "psql routing -c \"
 \""
 
 #Define custom functions
-sudo su -l postgres -c "psql routing -c '
+sudo su -l postgres -c "psql sidewalk -c '
   CREATE OR REPLACE FUNCTION public.calculate_accessible_cost(integer)
     RETURNS double precision AS
   \$BODY\$WITH allcosts
@@ -180,7 +180,7 @@ sudo su -l postgres -c "psql routing -c '
 
 # TODO: Ways does not exist
 # Add topology
-# sudo su -l postgres -c "psql routing -c \"
+# sudo su -l postgres -c "psql sidewalk -c \"
 #   ALTER TABLE ways ADD COLUMN \"source\" integer;
 #   ALTER TABLE ways ADD COLUMN \"target\" integer;
 

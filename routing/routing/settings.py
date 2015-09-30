@@ -109,7 +109,7 @@ WSGI_APPLICATION = 'routing.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'routing',
+        'NAME': 'sidewalk',
         'USER': 'vagrant',
         'PASSWORD': 'sidewalk',
         'HOST': 'localhost',

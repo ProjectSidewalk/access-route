@@ -3,7 +3,7 @@ import json
 import psycopg2
 FEATURE_TYPE_ID = 2
 FILENAME = 'construction.geojson'
-conn_string = "host='localhost' dbname='routing' user='postgres' password='sidewalk'"
+conn_string = "host='localhost' dbname='sidewalk' user='postgres' password='sidewalk'"
 with open(FILENAME) as data_file:
     data = json.load(data_file)
 # Establish connection to database before starting

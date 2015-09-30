@@ -15,7 +15,12 @@ Features:
  * Customizable cost calculation algorithm for routing
 
 ### Installation/Usage (Easy Way) - Using Vagrant
-Start by installing virtualbox (www.virtualbox.org/wiki/Downloads) and vagrant (www.vagrantup.com). Spend some time setting up and familiarizing yourself with vagrant. Afterwards, in the access-route directory run:
+Start by installing virtualbox (www.virtualbox.org/wiki/Downloads) and vagrant (www.vagrantup.com). 
+Windows users should also install an SSH client as well (or the chance is you already have it if you are using git. 
+Add `C:\Program Files (x86)\Git\bin` to the PATH. 
+See [here](http://stackoverflow.com/questions/27768821/ssh-executable-not-found-in-any-directories-in-the-path)
+and [here](https://gist.github.com/haf/2843680) for more information.)
+Spend some time setting up and familiarizing yourself with vagrant. Afterwards, in the access-route directory run:
 
 ```
 vagrant up
@@ -42,7 +47,7 @@ You can also access the PostgreSQL database running inside of vagrant. For examp
 Host: localhost:15432
 User: vagrant
 Password: sidewalk
-Database: routing
+Database: sidewalk
 ```
 
 When you are done working be sure the suspend (or halt/destroy) your vagrant virtual machine:
@@ -70,8 +75,8 @@ Due to extensive use of PostGIS functions which don't fit well into Django model
 ##### Basic setup
 
 1. Install Postgres and [PostGIS](http://postgis.net/install/)
-2. Create a new Postgres database named `routing`
-3. Enable PostGIS in the `routing` database:
+2. Create a new Postgres database named `sidewalk`
+3. Enable PostGIS in the `sidewalk` database:
 ```sql
 -- Enable PostGIS (includes raster)
 CREATE EXTENSION postgis;
@@ -260,7 +265,7 @@ python manage.py migrate
 
 You can import street network data into the database using ogr2ogr. This command was tested using a geojson file as input, but you can probably use ogr2ogr with other data formats as well.
 ```
-ogr2ogr -f "PostgreSQL" PG:"dbname=routing user=postgres password=sidewalk" "source_data.geojson" -nln sidewalk_edge -append
+ogr2ogr -f "PostgreSQL" PG:"dbname=sidewalk user=postgres password=sidewalk" "source_data.geojson" -nln sidewalk_edge -append
 ```
 (Remember to replace the postgres username and password with your own and "source_data.geojson" with the name of your data file, of course.)
 
