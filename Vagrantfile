@@ -72,7 +72,7 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell", inline: $script
 
   # Bootstrap Postgres
-  config.vm.provision "shell", path: "Bootstrap/bootstrap.sh"
+  config.vm.provision "shell", path: "provisioners/bootstrap.sh"
 
   # TODO: Do we need this version installed?
   # Install PostGIS
@@ -81,7 +81,7 @@ Vagrant.configure(2) do |config|
   #SHELL
 
   # Bootstrap Postgres
-  config.vm.provision "shell", path: "Bootstrap/bootstrap2.sh"
+  config.vm.provision "shell", path: "provisioners/bootstrap2.sh"
 
   # PostgreSQL Server port forwarding
   config.vm.network "forwarded_port", guest: 5432, host: 15432
