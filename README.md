@@ -13,8 +13,50 @@ Features:
  * Graph of elevation along route, drawn using d3.js
  * Accessibility obstacles marked on map with clickable pins; links to Google Street View imagery
  * Customizable cost calculation algorithm for routing
- 
-### Installation/Usage
+
+### Installation/Usage (Easy Way) - Using Vagrant
+Start by installing virtualbox (www.virtualbox.org/wiki/Downloads) and vagrant (www.vagrantup.com). Spend some time setting up and familiarizing yourself with vagrant. Afterwards, in the access-route directory run:
+
+```
+vagrant up
+```
+
+This will create a new Ubuntu Trusty 64 Bit virtual machine and configure it for this project. This step will take a while. When it completes, you can log into a terminal of your new virtual machine by using:
+
+```
+vagrant ssh
+```
+
+You can find the access-route project in the /vagrant directory. To start the app run:
+
+```
+cd /vagrant/routing
+python manage.py runserver 0.0.0.0:8000
+```
+
+Then go to http://localhost:8000 on your laptop to see the website!
+
+You can also access the PostgreSQL database running inside of vagrant. For example, on osx you can use an app like Postico to connect to the PostgreSQL database using the credentials:
+
+```
+Host: localhost:15432
+User: vagrant
+Password: sidewalk
+Database: routing
+```
+
+When you are done working be sure the suspend (or halt/destroy) your vagrant virtual machine:
+```
+vagrant suspend
+```
+
+When you are ready to start working again just use:
+```
+vagrant up
+vagrant ssh
+```
+
+### Installation/Usage (Hard Way) - On your native machine
 
 #### Notes
 This guide assumes that you have street network data in geojson format, and information about the locations of accessibility features/obstacles in geojson files with a different file for each type of feature. If you have the data a different format, you may have to do some conversions or make adjustments to the instructions below.
@@ -43,7 +85,7 @@ CREATE EXTENSION postgis_tiger_geocoder;
 4. Enable PgRouting functions:
 ``` sql
 -- add pgRouting core functions
-CREATE EXTENSION pgrouting; 
+CREATE EXTENSION pgrouting;
 ```
 
 ##### Add the required tables:
@@ -154,49 +196,49 @@ A custom function is used to calculate the cost of traversing a street segment. 
 
 CREATE OR REPLACE FUNCTION public.calculate_accessible_cost(integer)
   RETURNS double precision AS
-$BODY$WITH allcosts 
-     AS (SELECT num_curbramps AS count, 
-                CASE 
+$BODY$WITH allcosts
+     AS (SELECT num_curbramps AS count,
+                CASE
                   WHEN num_curbramps = 0 THEN 50 --If there are no curbramps, add 50 meters to the cost
                   WHEN num_curbramps > 3 THEN -10 --If there are more than 3 curbramps, subtract 10 meters from the cost
                   ELSE 0 --If there are only 1 or 2 curbramps, cost is not affected.
                 END AS costcontrib
          FROM   (SELECT Count(*) AS num_curbramps --Count how many curbramps are on this street segment
-                 FROM   (SELECT accessibility_feature.accessibility_feature_id, 
-                                feature_type, 
-                                sidewalk_edge_id 
-                         FROM   accessibility_feature 
-                                INNER JOIN sidewalk_edge_accessibility_feature 
-                                        ON 
-                sidewalk_edge_accessibility_feature.accessibility_feature_id 
-                = 
-                accessibility_feature.accessibility_feature_id) AS foo 
+                 FROM   (SELECT accessibility_feature.accessibility_feature_id,
+                                feature_type,
+                                sidewalk_edge_id
+                         FROM   accessibility_feature
+                                INNER JOIN sidewalk_edge_accessibility_feature
+                                        ON
+                sidewalk_edge_accessibility_feature.accessibility_feature_id
+                =
+                accessibility_feature.accessibility_feature_id) AS foo
                  WHERE  sidewalk_edge_id = $1
                         AND feature_type = 1) AS curbramps --feature_type corresponds to the feature_id in fature_types
-         UNION 
-         SELECT num_construction AS count, 
-                CASE 
+         UNION
+         SELECT num_construction AS count,
+                CASE
                   WHEN num_construction = 0 THEN -10 --If there is no construction, subtract 10m from the cost
                   WHEN num_construction > 0 THEN num_construction * 10000 --For each construction obstacle, add 10km to the cost (which is so high that the street segment will probably be avoided)
-                  ELSE 0 
+                  ELSE 0
                 END AS costcontrib
          FROM   (SELECT Count(*) AS num_construction --Count the number of construction obstacles on the street segment
-                 FROM   (SELECT accessibility_feature.accessibility_feature_id, 
-                                feature_type, 
-                                sidewalk_edge_id 
-                         FROM   accessibility_feature 
-                                INNER JOIN sidewalk_edge_accessibility_feature 
-                                        ON 
-                sidewalk_edge_accessibility_feature.accessibility_feature_id 
-                = 
-                accessibility_feature.accessibility_feature_id) AS foo 
+                 FROM   (SELECT accessibility_feature.accessibility_feature_id,
+                                feature_type,
+                                sidewalk_edge_id
+                         FROM   accessibility_feature
+                                INNER JOIN sidewalk_edge_accessibility_feature
+                                        ON
+                sidewalk_edge_accessibility_feature.accessibility_feature_id
+                =
+                accessibility_feature.accessibility_feature_id) AS foo
                  WHERE  sidewalk_edge_id = $1
                         AND feature_type = 2) AS construction --feature_type corresponds to the feature_id in feature_types
-         UNION 
+         UNION
          (SELECT St_length(St_transform(wkb_geometry, 3637)), --Finally, add the length of the segment (in meters) to the cost
                  St_length(St_transform(wkb_geometry, 3637)) as costcontrib
-          FROM   sidewalk_edge AS distance_cost 
-          WHERE  sidewalk_edge_id = $1)) 
+          FROM   sidewalk_edge AS distance_cost
+          WHERE  sidewalk_edge_id = $1))
 SELECT sum(costcontrib)
 FROM   allcosts; $BODY$
   LANGUAGE sql VOLATILE
