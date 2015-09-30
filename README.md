@@ -47,7 +47,7 @@ You can also access the PostgreSQL database running inside of vagrant. For examp
 Host: localhost:15432
 User: vagrant
 Password: sidewalk
-Database: routing
+Database: sidewalk
 ```
 
 When you are done working be sure the suspend (or halt/destroy) your vagrant virtual machine:
@@ -75,8 +75,8 @@ Due to extensive use of PostGIS functions which don't fit well into Django model
 ##### Basic setup
 
 1. Install Postgres and [PostGIS](http://postgis.net/install/)
-2. Create a new Postgres database named `routing`
-3. Enable PostGIS in the `routing` database:
+2. Create a new Postgres database named `sidewalk`
+3. Enable PostGIS in the `sidewalk` database:
 ```sql
 -- Enable PostGIS (includes raster)
 CREATE EXTENSION postgis;
@@ -265,7 +265,7 @@ python manage.py migrate
 
 You can import street network data into the database using ogr2ogr. This command was tested using a geojson file as input, but you can probably use ogr2ogr with other data formats as well.
 ```
-ogr2ogr -f "PostgreSQL" PG:"dbname=routing user=postgres password=sidewalk" "source_data.geojson" -nln sidewalk_edge -append
+ogr2ogr -f "PostgreSQL" PG:"dbname=sidewalk user=postgres password=sidewalk" "source_data.geojson" -nln sidewalk_edge -append
 ```
 (Remember to replace the postgres username and password with your own and "source_data.geojson" with the name of your data file, of course.)
 

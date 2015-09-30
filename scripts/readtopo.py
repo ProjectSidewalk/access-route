@@ -5,7 +5,7 @@ import logging as log
 
 # ----CUSTOMIZABLE VARIABLES----
 
-CONN_STRING = "dbname='routing' user='postgres' host='localhost' password='sidewalk'"
+CONN_STRING = "dbname='sidewalk' user='postgres' host='localhost' password='sidewalk'"
 FILENAME = 'ned19_n39x00_w077x00_md_washingtondc_2008.img'
 # This file covers an area of a quarter degree lat. by a quarter degree long.
 # Adjust as needed
