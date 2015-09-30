@@ -15,7 +15,12 @@ Features:
  * Customizable cost calculation algorithm for routing
 
 ### Installation/Usage (Easy Way) - Using Vagrant
-Start by installing virtualbox (www.virtualbox.org/wiki/Downloads) and vagrant (www.vagrantup.com). Spend some time setting up and familiarizing yourself with vagrant. Afterwards, in the access-route directory run:
+Start by installing virtualbox (www.virtualbox.org/wiki/Downloads) and vagrant (www.vagrantup.com). 
+Windows users should also install an SSH client as well (or the chance is you already have it if you are using git. 
+Add `C:\Program Files (x86)\Git\bin` to the PATH. 
+See [here](http://stackoverflow.com/questions/27768821/ssh-executable-not-found-in-any-directories-in-the-path)
+and [here](https://gist.github.com/haf/2843680) for more information.)
+Spend some time setting up and familiarizing yourself with vagrant. Afterwards, in the access-route directory run:
 
 ```
 vagrant up
