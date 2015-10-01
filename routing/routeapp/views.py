@@ -99,6 +99,7 @@ def search(request):
         error = "Error: One or more fields were left blank."
 
     cursor = connection.cursor()
+    cursor.execute("SET search_path TO sidewalk,public;")  # Allow the subsequent queries to access tables under the sidewalk schema without a qualifier (i.e., sidewalk.XXX) http://www.postgresql.org/docs/9.2/static/ddl-schemas.html
     # Find the sidewalk edge closest to the start location and store the value in its 'source' column as start_source_id
     cursor.execute("SELECT source FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [lng, lat])
     row = cursor.fetchone()
@@ -133,7 +134,7 @@ def search(request):
     UNION
 
     SELECT -1000 as sidewalk_edge_id, (
-    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), 
+    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),
         (
         SELECT ST_Line_Locate_Point((SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
         )
@@ -143,7 +144,7 @@ def search(request):
 
     UNION
     SELECT -1001 as sidewalk_edge_id, (
-    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0, 
+    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0,
         (
         SELECT ST_Line_Locate_Point((SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
         )

@@ -94,13 +94,14 @@ CREATE EXTENSION pgrouting;
 ```
 
 ##### Add the required tables:
+First create a `sidewalk` schema by typing `CREATE SCHEMA sidewalk;`
 
 `sidewalk_edge` stores the street network on which routes will be calculated. For details on how to create and populate this database, scroll down to **Importing the street network data**.
 
 
 `feature_types` stores the types of accessibility features that can be present on the map.
 ```sql
-CREATE TABLE public.feature_types
+CREATE TABLE sidewalk.feature_types
 (
   type_id integer NOT NULL DEFAULT nextval('feature_types_type_id_seq'::regclass),
   type_string character varying(150),
@@ -109,7 +110,7 @@ CREATE TABLE public.feature_types
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE public.feature_types
+ALTER TABLE sidewalk.feature_types
   OWNER TO postgres;
 ```
 After creating the table, you should add, at minimum, the following two entries:
@@ -121,7 +122,7 @@ After creating the table, you should add, at minimum, the following two entries:
 
 `accessibility_feature` stores accessibility features and their locations. After creating it, this table can be populated using a python script. Scroll down to **Populating accessibility features** for details.
 ```sql
-CREATE TABLE public.accessibility_feature
+CREATE TABLE sidewalk.accessibility_feature
 (
   accessibility_feature_id integer NOT NULL DEFAULT nextval('accessibility_features_feature_id_seq'::regclass),
   feature_geometry geometry(Point,4326),
@@ -130,32 +131,32 @@ CREATE TABLE public.accessibility_feature
   lat double precision,
   CONSTRAINT accessibility_features_pkey PRIMARY KEY (accessibility_feature_id),
   CONSTRAINT accessibility_feature_feature_type_fkey FOREIGN KEY (feature_type)
-      REFERENCES public.feature_types (type_id) MATCH SIMPLE
+      REFERENCES sidewalk.feature_types (type_id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE NO ACTION
 )
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE public.accessibility_feature
+ALTER TABLE sidewalk.accessibility_feature
   OWNER TO postgres;
 ```
 
 `sidewalk_edge_accessibility_feature` keeps track of which accessibility features belong to which streets. This table can also be populated automatically after creation; scroll down to **Populating accessibility features** for details.
 ```sql
-CREATE TABLE public.sidewalk_edge_accessibility_feature
+CREATE TABLE sidewalk.sidewalk_edge_accessibility_feature
 (
   sidewalk_edge_accessibility_feature_id integer NOT NULL DEFAULT nextval('sidewalk_edge_accessibility_f_sidewalk_edge_accessibility_f_seq'::regclass),
   sidewalk_edge_id integer,
   accessibility_feature_id integer,
   CONSTRAINT sidewalk_edge_accessibility_feature_pkey PRIMARY KEY (sidewalk_edge_accessibility_feature_id),
   CONSTRAINT sidewalk_edge_accessibility_feature_accessibility_feature_id_fk FOREIGN KEY (accessibility_feature_id)
-      REFERENCES public.accessibility_feature (accessibility_feature_id) MATCH SIMPLE
+      REFERENCES sidewalk.accessibility_feature (accessibility_feature_id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE NO ACTION
 )
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE public.sidewalk_edge_accessibility_feature
+ALTER TABLE sidewalk.sidewalk_edge_accessibility_feature
   OWNER TO postgres;
 
 ```
@@ -166,7 +167,7 @@ The `elevation` table stores the elevation data used to generate a graph of elev
 
 ```sql
 
-CREATE TABLE public.elevation
+CREATE TABLE sidewalk.elevation
 (
   lat double precision NOT NULL,
   "long" double precision NOT NULL,
@@ -176,21 +177,21 @@ CREATE TABLE public.elevation
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE public.elevation
+ALTER TABLE sidewalk.elevation
   OWNER TO postgres;
 
 CREATE INDEX combined_index
-  ON public.elevation
+  ON sidewalk.elevation
   USING btree
   (lat, long);
 
 CREATE INDEX lat_index
-  ON public.elevation
+  ON sidewalk.elevation
   USING btree
   (lat);
 
 CREATE INDEX lng_index
-  ON public.elevation
+  ON sidewalk.elevation
   USING btree
   (long);
 ```
@@ -199,7 +200,7 @@ CREATE INDEX lng_index
 A custom function is used to calculate the cost of traversing a street segment. The function takes into account the length of the street, the number of curb ramps on the street, and the number of "construction" obstacles on the street. Feel free to customize this function by changing how the cost is calculated or by adding additional feature types.
 ```sql
 
-CREATE OR REPLACE FUNCTION public.calculate_accessible_cost(integer)
+CREATE OR REPLACE FUNCTION sidewalk.calculate_accessible_cost(integer)
   RETURNS double precision AS
 $BODY$WITH allcosts
      AS (SELECT num_curbramps AS count,
@@ -248,7 +249,7 @@ SELECT sum(costcontrib)
 FROM   allcosts; $BODY$
   LANGUAGE sql VOLATILE
   COST 100;
-ALTER FUNCTION public.calculate_accessible_cost(integer)
+ALTER FUNCTION sidewalk.calculate_accessible_cost(integer)
   OWNER TO postgres;
 ```
 
