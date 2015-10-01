@@ -8,12 +8,17 @@ import json
 import logging
 import geojson
 import math
+
+import pdb
+
 logger = logging.getLogger(__name__)
 # Create your views here.
 global_start_lat = 0
 global_end_lat = 0
 global_start_lng = 0
 global_end_lng = 0
+
+
 def homepage(request):
     default_startaddr = "Enter start address"
     default_endaddr = "Enter end address"
@@ -136,7 +141,9 @@ def search(request):
     SELECT -1000 as sidewalk_edge_id, (
     ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),
         (
-        SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326), (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ,1) 
     ) as geom, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, '-123' as source
@@ -145,7 +152,9 @@ def search(request):
     SELECT -1001 as sidewalk_edge_id, (
     ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0,
         (
-        SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ) 
     ) as geom, '-123' as target, (SELECT source FROM sidewalk_edge WHERE sidewalk_edge_id=%s LIMIT 1) as source
@@ -155,7 +164,9 @@ def search(request):
     SELECT -1002 as sidewalk_edge_id, (
     ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0,
         (
-        SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ) 
     ) as geom, '-124' as target, (SELECT source FROM sidewalk_edge WHERE sidewalk_edge_id=%s LIMIT 1) as source
@@ -165,13 +176,20 @@ def search(request):
     SELECT -1003 as sidewalk_edge_id, (
     ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),
         (
-        SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ,1) 
     ) as geom, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, '-124' as source
     ;
     """
-    cursor.execute(create_temp_query, [start_edge_id,start_edge_id,lng,lat,start_edge_id,start_edge_id,start_edge_id,start_edge_id,lng,lat,start_edge_id,start_edge_id,end_edge_id,end_edge_id,destlng,destlat,end_edge_id,end_edge_id,end_edge_id,end_edge_id,destlng,destlat,end_edge_id,end_edge_id])
+
+    cursor.execute(create_temp_query, [start_edge_id, start_edge_id, lng, lat, start_edge_id, start_edge_id,
+                                       start_edge_id, start_edge_id, lng, lat, start_edge_id, start_edge_id,
+                                       end_edge_id, end_edge_id, destlng, destlat, end_edge_id, end_edge_id,
+                                       end_edge_id, end_edge_id, destlng, destlat, end_edge_id, end_edge_id])
+    cursor.execute("select * from combined_sidewalk_edge")
 
     # Now that the temporary table combined_sidewalk_edge has been created, we can query for a route from the start
     # location to the end location. This query will return a route as a Geojson string.
@@ -192,22 +210,19 @@ def search(request):
     # ) as routegeometries
     # ) as final; """
     routesql = """
-    SELECT ST_AsGeoJSON(st_union) FROM (
-    SELECT ST_Union(geom) FROM (
-    SELECT seq, id1 AS node, id2 AS edge, route.cost, dt.geom, dt.sidewalk_edge_id FROM pgr_dijkstra('
-                SELECT sidewalk_edge_id AS id,
-                         source::int4,
-                         target::int4,
-                         1.0::float8 AS cost
-                        FROM combined_sidewalk_edge',
-                %s, %s, false, false) as route
-				join combined_sidewalk_edge  dt
-				on route.id2 = dt.sidewalk_edge_id
+    SELECT ST_AsGeoJSON(route_geom) FROM (
+    SELECT ST_Union(geom) as route_geom FROM (
+        SELECT seq, id1 AS node, id2 AS edge, route.cost, dt.geom, dt.sidewalk_edge_id FROM pgr_dijkstra('SELECT sidewalk_edge_id AS id,
+                source::int4, target::int4, 1.0::float8 AS cost FROM combined_sidewalk_edge', -123, -124, false, false
+                ) as route
+        join combined_sidewalk_edge dt on route.id2 = dt.sidewalk_edge_id
     ) as routegeometries
-    ) as final; """
+) as final;""".replace("\t", "").replace("\n", "")
     # The source will always be -123 and the target will always be -124 because those are the source/target values we
     # assigned to the newly generated edges in the gigantic SQL query above.
-    cursor.execute(routesql, [-123, -124])
+
+    cursor.execute(routesql)
+    # cursor.execute(routesql, ["-123", "-124"])
     row = cursor.fetchone()
     # Store the geojson string describing the route as routejs
     routejs = row[0]
