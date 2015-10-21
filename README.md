@@ -213,8 +213,8 @@ $BODY$WITH allcosts
                  FROM   (SELECT accessibility_feature.accessibility_feature_id,
                                 feature_type,
                                 sidewalk_edge_id
-                         FROM   accessibility_feature
-                                INNER JOIN sidewalk_edge_accessibility_feature
+                         FROM   sidewalk.accessibility_feature
+                                INNER JOIN sidewalk.sidewalk_edge_accessibility_feature
                                         ON
                 sidewalk_edge_accessibility_feature.accessibility_feature_id
                 =
@@ -232,8 +232,8 @@ $BODY$WITH allcosts
                  FROM   (SELECT accessibility_feature.accessibility_feature_id,
                                 feature_type,
                                 sidewalk_edge_id
-                         FROM   accessibility_feature
-                                INNER JOIN sidewalk_edge_accessibility_feature
+                         FROM   sidewalk.accessibility_feature
+                                INNER JOIN sidewalk.sidewalk_edge_accessibility_feature
                                         ON
                 sidewalk_edge_accessibility_feature.accessibility_feature_id
                 =
@@ -241,9 +241,9 @@ $BODY$WITH allcosts
                  WHERE  sidewalk_edge_id = $1
                         AND feature_type = 2) AS construction --feature_type corresponds to the feature_id in feature_types
          UNION
-         (SELECT St_length(St_transform(wkb_geometry, 3637)), --Finally, add the length of the segment (in meters) to the cost
-                 St_length(St_transform(wkb_geometry, 3637)) as costcontrib
-          FROM   sidewalk_edge AS distance_cost
+         (SELECT St_length(St_transform(geom, 3637)), --Finally, add the length of the segment (in meters) to the cost
+                 St_length(St_transform(geom, 3637)) as costcontrib
+          FROM   sidewalk.sidewalk_edge AS distance_cost
           WHERE  sidewalk_edge_id = $1))
 SELECT sum(costcontrib)
 FROM   allcosts; $BODY$
