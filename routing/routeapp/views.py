@@ -8,12 +8,17 @@ import json
 import logging
 import geojson
 import math
+
+import pdb
+
 logger = logging.getLogger(__name__)
 # Create your views here.
 global_start_lat = 0
 global_end_lat = 0
 global_start_lng = 0
 global_end_lng = 0
+
+
 def homepage(request):
     default_startaddr = "Enter start address"
     default_endaddr = "Enter end address"
@@ -99,22 +104,23 @@ def search(request):
         error = "Error: One or more fields were left blank."
 
     cursor = connection.cursor()
+    cursor.execute("SET search_path TO sidewalk,public;")  # Allow the subsequent queries to access tables under the sidewalk schema without a qualifier (i.e., sidewalk.XXX) http://www.postgresql.org/docs/9.2/static/ddl-schemas.html
     # Find the sidewalk edge closest to the start location and store the value in its 'source' column as start_source_id
-    cursor.execute("SELECT source FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [lng, lat])
+    cursor.execute("SELECT source FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), geom) ASC LIMIT 1", [lng, lat])
     row = cursor.fetchone()
     start_source_id = row[0]
     # Find the sidewalk edge closest to the end location and store the value in its 'target' column as end_target_id
-    cursor.execute("SELECT target FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [destlng, destlat])
+    cursor.execute("SELECT target FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), geom) ASC LIMIT 1", [destlng, destlat])
     row = cursor.fetchone()
     end_target_id = row[0]
     
     # Find the sidewalk edge closest to the start location and store its 'sidewalk_edge_id' as start_edge_id
-    cursor.execute("SELECT sidewalk_edge_id FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [lng, lat])
+    cursor.execute("SELECT sidewalk_edge_id FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), geom) ASC LIMIT 1", [lng, lat])
     row = cursor.fetchone()
     start_edge_id = row[0]
     # Find the sidewalk edge closest to the end location and store its 'sidewalk_edge_id' as end_edge_id
     
-    cursor.execute("SELECT sidewalk_edge_id FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [destlng, destlat])
+    cursor.execute("SELECT sidewalk_edge_id FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), geom) ASC LIMIT 1", [destlng, destlat])
     row = cursor.fetchone()
     end_edge_id = row[0]
 
@@ -129,71 +135,94 @@ def search(request):
     cursor.execute("DISCARD TEMP;")
     create_temp_query = """
     CREATE TEMP TABLE combined_sidewalk_edge AS
-    SELECT * FROM sidewalk_edge
+    SELECT sidewalk_edge_id, geom, target, source  FROM sidewalk_edge
     UNION
 
     SELECT -1000 as sidewalk_edge_id, (
-    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), 
+    ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),
         (
-        SELECT ST_Line_Locate_Point((SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326), (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ,1) 
-    ) as wkb_geometry, '{2g00,20g0}' as node_ids, '{}' as osm_ways, 0.0 as x2, 1 as cost, 'test' as user,
-    0.0 as y1, '2432432' as way_id, 0.0 as x1, 0.0 as y2, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, 'temporary' as way_type, '-123' as source, 1 as reverse_cost
+    ) as geom, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, '-123' as source
 
     UNION
     SELECT -1001 as sidewalk_edge_id, (
-    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0, 
+    ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0,
         (
-        SELECT ST_Line_Locate_Point((SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ) 
-    ) as wkb_geometry, '{2g00,20g0}' as node_ids, '{}' as osm_ways, 0.0 as x2, 1 as cost, 'test' as user,
-    0.0 as y1, '2432432' as way_id, 0.0 as x1, 0.0 as y2, '-123' as target, 'temporary' as way_type, (SELECT source FROM sidewalk_edge WHERE sidewalk_edge_id=%s LIMIT 1) as source, 1 as reverse_cost
+    ) as geom, '-123' as target, (SELECT source FROM sidewalk_edge WHERE sidewalk_edge_id=%s LIMIT 1) as source
     
     UNION
+
     SELECT -1002 as sidewalk_edge_id, (
-    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0, 
+    ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),0,
         (
-        SELECT ST_Line_Locate_Point((SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ) 
-    ) as wkb_geometry, '{2g00,20g0}' as node_ids, '{}' as osm_ways, 0.0 as x2, 1 as cost, 'test' as user,
-    0.0 as y1, '2432432' as way_id, 0.0 as x1, 0.0 as y2, '-124' as target, 'temporary' as way_type, (SELECT source FROM sidewalk_edge WHERE sidewalk_edge_id=%s LIMIT 1) as source, 1 as reverse_cost
+    ) as geom, '-124' as target, (SELECT source FROM sidewalk_edge WHERE sidewalk_edge_id=%s LIMIT 1) as source
     
     UNION
 
     SELECT -1003 as sidewalk_edge_id, (
-    ST_Line_Substring(  (SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), 
+    ST_Line_Substring(  (SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1),
         (
-        SELECT ST_Line_Locate_Point((SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT wkb_geometry from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) )))
+            SELECT ST_Line_Locate_Point((SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1), (
+                SELECT ST_ClosestPoint(ST_GeomFromText('POINT(%s %s)', 4326),(SELECT geom from sidewalk_edge where sidewalk_edge_id = %s LIMIT 1) ))
+            )
         )
     ,1) 
-    ) as wkb_geometry, '{2g00,20g0}' as node_ids, '{}' as osm_ways, 0.0 as x2, 1 as cost, 'test' as user,
-    0.0 as y1, '2432432' as way_id, 0.0 as x1, 0.0 as y2, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, 'temporary' as way_type, '-124' as source, 1 as reverse_cost
+    ) as geom, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, '-124' as source
     ;
     """
-    cursor.execute(create_temp_query, [start_edge_id,start_edge_id,lng,lat,start_edge_id,start_edge_id,start_edge_id,start_edge_id,lng,lat,start_edge_id,start_edge_id,end_edge_id,end_edge_id,destlng,destlat,end_edge_id,end_edge_id,end_edge_id,end_edge_id,destlng,destlat,end_edge_id,end_edge_id])
+
+    cursor.execute(create_temp_query, [start_edge_id, start_edge_id, lng, lat, start_edge_id, start_edge_id,
+                                       start_edge_id, start_edge_id, lng, lat, start_edge_id, start_edge_id,
+                                       end_edge_id, end_edge_id, destlng, destlat, end_edge_id, end_edge_id,
+                                       end_edge_id, end_edge_id, destlng, destlat, end_edge_id, end_edge_id])
+    cursor.execute("select * from combined_sidewalk_edge")
 
     # Now that the temporary table combined_sidewalk_edge has been created, we can query for a route from the start
     # location to the end location. This query will return a route as a Geojson string.
+
+    # Todo. I changed calculate_accessible_cost to 1 for now.
+    # routesql = """
+    # SELECT ST_AsGeoJSON(st_union) FROM (
+    # SELECT ST_Union(geom) FROM (
+    # SELECT seq, id1 AS node, id2 AS edge, route.cost, dt.geom, dt.sidewalk_edge_id FROM pgr_dijkstra('
+    #             SELECT sidewalk_edge_id AS id,
+    #                      source::integer,
+    #                      target::integer,
+    #                      calculate_accessible_cost(sidewalk_edge_id)::double precision AS cost
+    #                     FROM combined_sidewalk_edge',
+    #             %s, %s, false, false) as route
+		# 		join combined_sidewalk_edge  dt
+		# 		on route.id2 = dt.sidewalk_edge_id
+    # ) as routegeometries
+    # ) as final; """
     routesql = """
-    SELECT ST_AsGeoJSON(st_union) FROM (
-    SELECT ST_Union(wkb_geometry) FROM (
-    SELECT seq, id1 AS node, id2 AS edge, route.cost, dt.wkb_geometry, dt.sidewalk_edge_id FROM pgr_dijkstra('
-                SELECT sidewalk_edge_id AS id,
-                         source::integer,
-                         target::integer,
-                         calculate_accessible_cost(sidewalk_edge_id)::double precision AS cost
-                        FROM combined_sidewalk_edge',
-                %s, %s, false, false) as route
-				join combined_sidewalk_edge  dt
-				on route.id2 = dt.sidewalk_edge_id
+    SELECT ST_AsGeoJSON(route_geom) FROM (
+    SELECT ST_Union(geom) as route_geom FROM (
+        SELECT seq, id1 AS node, id2 AS edge, route.cost, dt.geom, dt.sidewalk_edge_id FROM pgr_dijkstra('SELECT sidewalk_edge_id AS id,
+                source::int4, target::int4, 1.0::float8 AS cost FROM combined_sidewalk_edge', -123, -124, false, false
+                ) as route
+        join combined_sidewalk_edge dt on route.id2 = dt.sidewalk_edge_id
     ) as routegeometries
-    ) as final; """
+) as final;""".replace("\t", "").replace("\n", "")
     # The source will always be -123 and the target will always be -124 because those are the source/target values we
     # assigned to the newly generated edges in the gigantic SQL query above.
-    cursor.execute(routesql, [-123, -124])
+
+    cursor.execute(routesql)
+    # cursor.execute(routesql, ["-123", "-124"])
     row = cursor.fetchone()
     # Store the geojson string describing the route as routejs
     routejs = row[0]
@@ -359,6 +388,7 @@ def search(request):
     # print(routejs)
     return render(request, 'routeapp/homepage.html', {'submitted_start':address, 'submitted_dest':dest,'constructionfeatures':construction_geojson, 'routestartlng':route_start_lng, 'routestartlat':route_start_lat, 'routeendlng':route_end_lng, 'routeendlat':route_end_lat, 'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
 
+
 def output_geojson(input_path, input_elevation_list):
     featurelist = []
     # Convert the input path to a python LineString
@@ -370,7 +400,8 @@ def output_geojson(input_path, input_elevation_list):
     # Encode FeatureCollection as JSON
     dump = geojson.dumps(FeatureClct, sort_keys=True)
     return dump
-    
+
+
 def get_elevations(input_path):
     output_elevations = []
     
@@ -403,6 +434,8 @@ def get_elevations(input_path):
         for elevation in results:
             output_elevations.append(elevation[0])
     return output_elevations
+
+
 def split(path_to_split):
     """
     Takes a path, represented as an array of coordinates, and

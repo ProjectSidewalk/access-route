@@ -48,13 +48,13 @@ Vagrant.configure(2) do |config|
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  config.vm.provider "virtualbox" do |vb|
+  # config.vm.provider "virtualbox" do |vb|
     # Display the VirtualBox GUI when booting the machine
     # vb.gui = true
 
     # Customize the amount of memory on the VM:
-    vb.memory = "2048"
-  end
+    # vb.memory = "2048"
+  # end
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -72,16 +72,16 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell", inline: $script
 
   # Bootstrap Postgres
-  config.vm.provision "shell", path: "Bootstrap/bootstrap.sh"
+  config.vm.provision "shell", path: "provisioners/bootstrap.sh"
 
   # TODO: Do we need this version installed?
   # Install PostGIS
-  config.vm.provision "shell", inline: <<-SHELL
-    sudo apt-get install -y postgis postgresql-9.3-postgis-2.1
-  SHELL
+  #config.vm.provision "shell", inline: <<-SHELL
+  #  sudo apt-get install -y postgis postgresql-9.3-postgis-2.1
+  #SHELL
 
   # Bootstrap Postgres
-  config.vm.provision "shell", path: "Bootstrap/bootstrap2.sh"
+  config.vm.provision "shell", path: "provisioners/bootstrap2.sh"
 
   # PostgreSQL Server port forwarding
   config.vm.network "forwarded_port", guest: 5432, host: 15432

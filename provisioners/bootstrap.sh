@@ -8,7 +8,8 @@ APP_DB_PASS=sidewalk
 APP_DB_NAME=sidewalk
 
 # Edit the following to change the version of PostgreSQL that is installed
-PG_VERSION=9.4
+PG_VERSION=9.3
+POSTGIS_VERSION=2.1
 
 ###########################################################
 # Changes below this line are probably not necessary
@@ -63,7 +64,11 @@ fi
 apt-get update
 apt-get -y upgrade
 
+# Install Postgres and PostGIS
 apt-get -y install "postgresql-$PG_VERSION" "postgresql-contrib-$PG_VERSION"
+apt-get install -y postgis*
+apt-get install -y pgrouting*
+# apt-get install -y postgis "postgresql-$PG_VERSION-postgis-$POSTGIS_VERSION"
 
 PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
 PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
