@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Setup pip
 sudo apt-get install
 sudo apt-get install -y postgresql-server-dev-9.3 python-dev python-pip
@@ -30,13 +31,15 @@ sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION fuzzystrmatch'"
 sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION postgis_tiger_geocoder'"
 sudo su -l postgres -c "psql sidewalk -c 'CREATE EXTENSION pgrouting'"
 
-ogr2ogr -f "PostgreSQL" PG:"host=localhost dbname=sidewalk user=vagrant password=sidewalk" "/vagrant/simple.geojson" -nln sidewalk_edge -append
-sudo su -l postgres -c "psql sidewalk -c 'ALTER TABLE sidewalk_edge RENAME COLUMN ogc_fid TO sidewalk_edge_id'"
 
-# Create required tables
+# Create requrired tables and import data. Todo. KH should create a sql dump to import. I think it's cleaner to separate all the SQL commands from this shell script.
+ogr2ogr -f "PostgreSQL" PG:"host=localhost dbname=sidewalk user=vagrant password=sidewalk" "/vagrant/simple.geojson" -nln sidewalk_edge -append
+sudo su -l postgres -c "psql sidewalk -c 'CREATE SCHEMA sidewalk'"
+sudo su -l postgres -c "psql sidewalk -c 'ALTER TABLE sidewalk.sidewalk_edge RENAME COLUMN ogc_fid TO sidewalk_edge_id'"
+
 sudo su -l postgres -c "psql sidewalk -c 'CREATE SEQUENCE feature_types_type_id_seq'"
 sudo su -l postgres -c "psql sidewalk -c \"
-  CREATE TABLE public.feature_types
+  CREATE TABLE sidewalk.feature_types
   (
     type_id integer NOT NULL DEFAULT nextval('feature_types_type_id_seq'::regclass),
     type_string character varying(150),
@@ -45,7 +48,7 @@ sudo su -l postgres -c "psql sidewalk -c \"
   WITH (
     OIDS=FALSE
   );
-  ALTER TABLE public.feature_types OWNER TO vagrant;
+  ALTER TABLE sidewalk.feature_types OWNER TO vagrant;
 \""
 sudo su -l postgres -c "psql sidewalk -c \"
   INSERT INTO feature_types (type_string) VALUES
@@ -55,7 +58,7 @@ sudo su -l postgres -c "psql sidewalk -c \"
 
 sudo su -l postgres -c "psql sidewalk -c 'CREATE SEQUENCE accessibility_features_feature_id_seq'"
 sudo su -l postgres -c "psql sidewalk -c \"
-  CREATE TABLE public.accessibility_feature
+  CREATE TABLE sidewalk.accessibility_feature
   (
     accessibility_feature_id integer NOT NULL DEFAULT nextval('accessibility_features_feature_id_seq'::regclass),
     feature_geometry geometry(Point,4326),
@@ -64,37 +67,37 @@ sudo su -l postgres -c "psql sidewalk -c \"
     lat double precision,
     CONSTRAINT accessibility_features_pkey PRIMARY KEY (accessibility_feature_id),
     CONSTRAINT accessibility_feature_feature_type_fkey FOREIGN KEY (feature_type)
-        REFERENCES public.feature_types (type_id) MATCH SIMPLE
+        REFERENCES sidewalk.feature_types (type_id) MATCH SIMPLE
         ON UPDATE NO ACTION ON DELETE NO ACTION
   )
   WITH (
     OIDS=FALSE
   );
-  ALTER TABLE public.accessibility_feature OWNER TO vagrant;
+  ALTER TABLE sidewalk.accessibility_feature OWNER TO vagrant;
 \""
 
 # TODO: sidewalk_edge_accessibility_feature
 sudo su -l postgres -c "psql sidewalk -c 'CREATE SEQUENCE sidewalk_edge_accessibility_f_sidewalk_edge_accessibility_f_seq'"
 sudo su -l postgres -c "psql sidewalk -c \"
-  CREATE TABLE public.sidewalk_edge_accessibility_feature
+  CREATE TABLE sidewalk.sidewalk_edge_accessibility_feature
   (
     sidewalk_edge_accessibility_feature_id integer NOT NULL DEFAULT nextval('sidewalk_edge_accessibility_f_sidewalk_edge_accessibility_f_seq'::regclass),
     sidewalk_edge_id integer,
     accessibility_feature_id integer,
     CONSTRAINT sidewalk_edge_accessibility_feature_pkey PRIMARY KEY (sidewalk_edge_accessibility_feature_id),
     CONSTRAINT sidewalk_edge_accessibility_feature_accessibility_feature_id_fk FOREIGN KEY (accessibility_feature_id)
-        REFERENCES public.accessibility_feature (accessibility_feature_id) MATCH SIMPLE
+        REFERENCES sidewalk.accessibility_feature (accessibility_feature_id) MATCH SIMPLE
         ON UPDATE NO ACTION ON DELETE NO ACTION
   )
   WITH (
     OIDS=FALSE
   );
-  ALTER TABLE public.sidewalk_edge_accessibility_feature
+  ALTER TABLE sidewalk.sidewalk_edge_accessibility_feature
     OWNER TO postgres;
 \""
 
 sudo su -l postgres -c "psql sidewalk -c \"
-  CREATE TABLE public.elevation
+  CREATE TABLE sidewalk.elevation
   (
     lat double precision NOT NULL,
     \"long\" double precision NOT NULL,
@@ -104,28 +107,28 @@ sudo su -l postgres -c "psql sidewalk -c \"
   WITH (
     OIDS=FALSE
   );
-  ALTER TABLE public.elevation
+  ALTER TABLE sidewalk.elevation
     OWNER TO postgres;
 
   CREATE INDEX combined_index
-    ON public.elevation
+    ON sidewalk.elevation
     USING btree
     (lat, long);
 
   CREATE INDEX lat_index
-    ON public.elevation
+    ON sidewalk.elevation
     USING btree
     (lat);
 
   CREATE INDEX lng_index
-    ON public.elevation
+    ON sidewalk.elevation
     USING btree
     (long);
 \""
 
 #Define custom functions
 sudo su -l postgres -c "psql sidewalk -c '
-  CREATE OR REPLACE FUNCTION public.calculate_accessible_cost(integer)
+  CREATE OR REPLACE FUNCTION sidewalk.calculate_accessible_cost(integer)
     RETURNS double precision AS
   \$BODY\$WITH allcosts
        AS (SELECT num_curbramps AS count,
@@ -174,7 +177,7 @@ sudo su -l postgres -c "psql sidewalk -c '
   FROM   allcosts; \$BODY\$
     LANGUAGE sql VOLATILE
     COST 100;
-  ALTER FUNCTION public.calculate_accessible_cost(integer)
+  ALTER FUNCTION sidewalk.calculate_accessible_cost(integer)
     OWNER TO postgres;
 '";
 
